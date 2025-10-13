@@ -1,0 +1,10 @@
+apache-airflow-providers-postgres
+apache-airflow-providers-amazon
+boto3
+s3fs
+duckdb==1.0.0
+clickhouse-driver
+psycopg2-binary
+pyarrow
+pandas
+requests

@@ -1,0 +1,30 @@
+{
+  "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+  "tasks.max": "1",
+  "topics": "sptrans-trusted",
+
+  "connection.url": "jdbc:postgresql://postgres:5432/trusted_sptrans",
+  "connection.user": "airflow",
+  "connection.password": "airflow",
+
+  "auto.create": "false",
+  "auto.evolve": "false",
+  "insert.mode": "upsert",
+  "pk.mode": "record_value",
+  "pk.fields": "route_id,vehicle_id,event_ts",
+
+  "table.name.format": "public.positions",
+
+  "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+  "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+  "value.converter.schemas.enable": "true",
+
+  "errors.tolerance": "all",
+  "errors.log.enable": "true",
+  "errors.deadletterqueue.topic.name": "dlq-pg-positions",
+  "errors.deadletterqueue.topic.replication.factor": "1",
+
+  "transforms": "AddIngestionTs",
+  "transforms.AddIngestionTs.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+  "transforms.AddIngestionTs.timestamp.field": "ingestion_ts"
+}

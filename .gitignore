@@ -1,0 +1,11 @@
+commands
+credentials
+script
+*.log
+LICENSE*
+*properties
+*.jar
+*jpg
+*png
+jp*
+*pyc
