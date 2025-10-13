@@ -11,8 +11,9 @@
 - Python (Pandas/SQLAlchemy) → análises e utilitários locais
 
 # 👷 Como rodar
+## 1) Clonar o repositório
 ```bash
-# 1) Clonar o repositório
+
 git clone https://github.com/huguds/sptrans-lake.git
 cd sptrans-lake
 ```
