@@ -68,7 +68,8 @@ Acesse:
 
 Bases: trusted_sptrans e refined_sptrans.
 
-Tabelas (exemplo TRUSTED):
+Tabelas:
+- TRUSTED:
 ```
 CREATE TABLE public.positions (
   route_id INT NOT NULL,
@@ -85,6 +86,25 @@ CREATE TABLE public.positions (
   stop_id TEXT,
   ingestion_ts TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (route_id, vehicle_id, event_ts)
+);
+```
+
+- REFINED:
+```
+CREATE TABLE public.positions (
+   route_id INT,
+   route_code VARCHAR(50),
+   direction INT,
+   dir_from VARCHAR(100),
+   dir_to VARCHAR(100),
+   vehicle_id INT,
+   in_service BOOLEAN,
+   event_ts TIMESTAMP,
+   speed FLOAT,
+   stop_id VARCHAR(50),
+   ingestion_ts TIMESTAMP,
+   formatted_address VARCHAR(255),
+   postal_code VARCHAR(20)
 );
 ```
 
