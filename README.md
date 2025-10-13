@@ -45,7 +45,10 @@ docker compose --env-file .env.local up -d \
   - Airflow executa rotinas (ex.: deduplicação, enriquecimento, carga para refined_sptrans).
 
 ✅ Passo a passo (resumo)
-## 1) Infra já no ar
+## 1) Deploy da Infra:
+```
+docker compose up -d airflow-webserver  airflow-scheduler airflow-triggerer airflow-init airflow-cli nifi minio postgres pgadmin zookeeper broker kafka-connect
+```
 
 Acesse:
 
@@ -58,6 +61,8 @@ Acesse:
 ## 2) NiFi
 - Importe o template em nifi/template/.
 - Configure variáveis/Controller Services:
+  - **Aws Credentials** - Passando as credenciais geradas para o futuro envio dos arquivos gerados
+  - **Kafka3ConnectionService**
 - MinIO (Access/Secret), endpoint http://minio:9000
 - Kafka (Bootstrap: kafka-broker:29092, tópico sptrans.trusted)
 
@@ -109,7 +114,18 @@ CREATE TABLE public.positions (
 ```
 
 ## 4) Kafka & Kafka Connect
-- Criar/garantir o tópico:
+
+- Listar os conectores para identificar se há algum ativo no momento (Kafka Connect):
+```
+curl -s http://localhost:8083/connectors | jq .
+```
+
+- Listar os tópicos (Kafka):
+```
+kafka-topics --bootstrap-server localhost:9092 --list
+```
+
+- Criar/garantir o tópico (Kafka):
 ```
 docker exec -it kafka-broker bash -lc \
   "kafka-topics --bootstrap-server kafka-broker:29092 \
@@ -117,12 +133,26 @@ docker exec -it kafka-broker bash -lc \
    --replication-factor 1 --partitions 1"
 ```
 
-- Criar/atualizar o conector JDBC:
+- Deletar tópico caso necessário (Kafka):
+```
+kafka-topics --delete --topic dlq.pg.positions --bootstrap-server localhost:9092
+```
+
+- Leitura das mensagem (Kafka):
+```
+docker exec -it broker bash -lc \
+    'kafka-console-consumer --bootstrap-server broker:9092 \
+    --topic sptrans-trusted --from-beginning \
+    --property print.key=true --property print.value=true --property print.headers=true
+```
+
+- Criar/atualizar o conector JDBC (Kafka Connect):
 ```
 curl -s -X PUT http://localhost:8083/connectors/conector-postgres/config \
   -H "Content-Type: application/json" \
   --data-binary @kafka-connect/conectores/conector-postgres.json
 ```
+- **Observação**: Entrar dentro do diretorio no qual estão os conectores (Kafka Connect).
 
 - Status:
 ```curl -s http://localhost:8083/connectors/conector-postgres/status | jq```
