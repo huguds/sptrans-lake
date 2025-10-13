@@ -29,7 +29,7 @@ docker compose --env-file .env.local up -d \
 ## 3) (Opcional) Instalar libs Python locais
 ```pip install -r requirements.txt  # se existir```
 
-- **Observação**: após instalar bibliotecas Python na sua IDE/Jupyter, reinicie o kernel para reconhecer os pacotes, além disso é necessário criar um arquivo .env com todas as credenciais necessárias, por exemplo:
+## **Observação**: após instalar bibliotecas Python na sua IDE/Jupyter, reinicie o kernel para reconhecer os pacotes, além disso é necessário criar um arquivo .env com todas as credenciais necessárias, por exemplo:
   - CONFLUENT_VERSION=7.6.1
   - MINIO_ROOT_USER=123
   - MINIO_ROOT_PASSWORD=abc
