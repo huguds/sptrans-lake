@@ -18,11 +18,7 @@ git clone https://github.com/huguds/sptrans-lake.git
 cd sptrans-lake
 ```
 
-## 2) Copiar e ajustar variáveis locais (NÃO versione)
-cp .env.example .env.local
-# edite .env.local e defina usuários/senhas (MinIO, Postgres etc.)
-
-## 3) Subir a stack principal (Docker Compose)
+## 2) Subir a stack principal (Docker Compose)
 ```
 docker compose --env-file .env.local up -d \
   zookeeper kafka-broker postgres pgadmin minio mc nifi \
@@ -30,12 +26,15 @@ docker compose --env-file .env.local up -d \
   kafka-connect
 ```
 
-## 4) (Opcional) Instalar libs Python locais
+## 3) (Opcional) Instalar libs Python locais
 ```pip install -r requirements.txt  # se existir```
 
-- **Observação**: após instalar bibliotecas Python na sua IDE/Jupyter, reinicie o kernel para reconhecer os pacotes.
+- **Observação**: após instalar bibliotecas Python na sua IDE/Jupyter, reinicie o kernel para reconhecer os pacotes, além disso é necessário criar um arquivo .env com todas as credenciais necessárias, por exemplo:
+  - CONFLUENT_VERSION=7.6.1
+  - MINIO_ROOT_USER=123
+  - MINIO_ROOT_PASSWORD=abc
 
-ℹ️ Informações sobre o projeto
+# ℹ️ Informações sobre o projeto
 
 ## Objetivo:
 - Construir um pipeline near real-time com camadas RAW → TRUSTED → REFINED:
