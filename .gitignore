@@ -9,3 +9,5 @@ LICENSE*
 *png
 jp*
 *pyc
+.env
+*.git*
