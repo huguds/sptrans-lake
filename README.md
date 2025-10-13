@@ -1,12 +1,12 @@
 # Projeto de Engenharia de Dados — SPTRANS Olho Vivo
 
-🧰 Ferramentas
+# 🛠️ Ferramentas
 
 - NiFi → Ingestão/transformação de dados (API Olho Vivo → Kafka/MinIO)
 - Kafka → Streaming de mensagens (tópico sptrans.trusted)
 - Kafka Connect (JDBC Sink) → Upsert no Postgres
 - Postgres → Camadas TRUSTED e REFINED
-- MinIO → Data Lake (raw/, trusted/, refined/)
+- MinIO → Data Lake (raw, trusted, refined)
 - Airflow → Orquestração (jobs batch/enriquecimento)
 - Python (Pandas/SQLAlchemy) → análises e utilitários locais
 
