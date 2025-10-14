@@ -13,17 +13,15 @@
 # 👷 Como rodar
 ## 1) Clonar o repositório
 ```bash
-
 git clone https://github.com/huguds/sptrans-lake.git
 cd sptrans-lake
 ```
 
 ## 2) Subir a stack principal (Docker Compose)
 ```
-docker compose --env-file .env.local up -d \
-  zookeeper kafka-broker postgres pgadmin minio mc nifi \
-  airflow-init airflow-webserver airflow-scheduler airflow-triggerer \
-  kafka-connect
+docker compose up -d \
+  nifi minio mc postgres pgadmin zookeeper broker kafka-connect \
+  airflow-init airflow-webserver airflow-scheduler airflow-triggerer
 ```
 
 ## 3) (Opcional) Instalar libs Python locais
@@ -118,19 +116,27 @@ CREATE TABLE public.positions (
 ```
 curl -s http://localhost:8083/connectors | jq .
 ```
+- Exemplo:
+<img width="829" height="85" alt="image" src="https://github.com/user-attachments/assets/931cdc1a-91ca-4f9a-99f7-95e1091b39c9" />
+
 
 - Listar os tópicos (Kafka):
 ```
 kafka-topics --bootstrap-server localhost:9092 --list
 ```
+- Exemplo:
+<img width="559" height="187" alt="image" src="https://github.com/user-attachments/assets/3a41d2b7-ca14-477c-88cf-717ad8a8190a" />
 
 - Criar/garantir o tópico (Kafka):
 ```
-docker exec -it kafka-broker bash -lc \
-  "kafka-topics --bootstrap-server kafka-broker:29092 \
-   --create --if-not-exists --topic sptrans.trusted \
+docker exec -it broker bash -lc \
+  "kafka-topics --bootstrap-server broker:29092 \
+   --create --if-not-exists --topic sptrans-trusted \
    --replication-factor 1 --partitions 1"
 ```
+- Exemplo:
+<img width="541" height="128" alt="image" src="https://github.com/user-attachments/assets/0fe46cd2-6a96-4722-ae9c-ff4fa4432e49" />
+
 
 - Deletar tópico caso necessário (Kafka):
 ```
@@ -151,10 +157,16 @@ curl -s -X PUT http://localhost:8083/connectors/conector-postgres/config \
   -H "Content-Type: application/json" \
   --data-binary @kafka-connect/conectores/conector-postgres.json
 ```
-- **Observação**: Entrar dentro do diretorio no qual estão os conectores (Kafka Connect).
+- Exemplo (Código de criação dos conectores):
+<img width="535" height="361" alt="image" src="https://github.com/user-attachments/assets/db5a4deb-28df-434d-802b-3a73f1a1ab3c" />
+
+- Exempl o(resultado após a listagem dos conectores):
+<img width="541" height="88" alt="image" src="https://github.com/user-attachments/assets/351f27d1-d289-4d72-9c74-6b1b2670cb7f" />
 
 - Status:
 ```curl -s http://localhost:8083/connectors/conector-postgres/status | jq```
+- Exemplo:
+<img width="542" height="315" alt="image" src="https://github.com/user-attachments/assets/153a1a1d-2fbc-4d84-b002-30bfe889be24" />
 
 ## 5) Airflow
 
@@ -165,10 +177,10 @@ curl -s -X PUT http://localhost:8083/connectors/conector-postgres/config \
 
 Ver mensagens no tópico:
 ```
-docker exec -it kafka-broker bash -lc \
-  "kafka-console-consumer --bootstrap-server kafka-broker:29092 \
-   --topic sptrans.trusted --from-beginning \
-   --property print.value=true --max-messages 5"
+docker exec -it broker bash -lc \
+  'kafka-console-consumer --bootstrap-server broker:9092 \
+    --topic sptrans-trusted --from-beginning \
+    --property print.key=true --property print.value=true --property print.headers=true'
 ```
 
 - Conferir no Postgres:
