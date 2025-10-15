@@ -18,7 +18,7 @@ cd sptrans-lake
 ```
 
 ## 2) Subir a stack principal (Docker Compose)
-```
+```bash
 docker compose up -d \
   nifi minio mc postgres pgadmin zookeeper broker kafka-connect \
   airflow-init airflow-webserver airflow-scheduler airflow-triggerer
@@ -40,12 +40,6 @@ docker compose up -d \
   - publica eventos no Kafka (sptrans.trusted).
   - Kafka Connect (JDBC Sink) lê o tópico e faz UPSERT em trusted_sptrans.public.positions.
   - Airflow executa rotinas (ex.: deduplicação, enriquecimento, carga para refined_sptrans).
-
-✅ Passo a passo (resumo)
-## 1) Deploy da Infra:
-```
-docker compose up -d airflow-webserver  airflow-scheduler airflow-triggerer airflow-init airflow-cli nifi minio postgres pgadmin zookeeper broker kafka-connect
-```
 
 Acesse:
 
