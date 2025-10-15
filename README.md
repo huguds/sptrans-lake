@@ -83,7 +83,7 @@ CREATE TABLE public.positions (
   dir_to TEXT,
   vehicle_id INT NOT NULL,
   in_service BOOLEAN,
-  event_ts TIMESTAMPTZ NOT NULL,
+  event_ts TEXT NOT NULL,
   lat DOUBLE PRECISION,
   lon DOUBLE PRECISION,
   speed DOUBLE PRECISION,

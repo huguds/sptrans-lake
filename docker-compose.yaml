@@ -191,6 +191,10 @@ services:
     volumes:
       - $PWD/connectors:/connectors
     # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
     command: 
       - bash 
       - -c 
@@ -215,6 +219,10 @@ services:
       SINGLE_USER_CREDENTIALS_USERNAME: ${SINGLE_USER_CREDENTIALS_USERNAME}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${SINGLE_USER_CREDENTIALS_PASSWORD}
       TZ: "America/Sao_Paulo"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
     ports:
       - 9443:9443
 
@@ -263,6 +271,10 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
     restart: always
 
    pgadmin:
@@ -274,7 +286,11 @@ services:
     ports:
       - "5433:80"
     depends_on:
-      - postgres 
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
 
    airflow-webserver:
     <<: *airflow-common
@@ -292,6 +308,10 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
 
    airflow-scheduler:
     <<: *airflow-common
@@ -307,6 +327,10 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
 
    airflow-triggerer:
     <<: *airflow-common
@@ -322,6 +346,10 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
 
    airflow-init:
     <<: *airflow-common
@@ -386,6 +414,10 @@ services:
     user: "0:0"
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
 
    airflow-cli:
     <<: *airflow-common
@@ -399,30 +431,10 @@ services:
       - bash
       - -c
       - airflow
-
-   spark:
-    platform: linux/amd64
-    image: fjardim/mds-spark
-    hostname: spark
-    container_name: spark
-    command:
-      - /bin/sh
-      - -c
-      - |
-        /usr/local/spark/sbin/start-master.sh
-        start-notebook.sh --NotebookApp.token=''
-    ports:
-      - 8889:8888
-      - 4040:4040
-      - 4041:4041
-      - 4042:4042
-      - 4043:4043
-      - 8180:8080
-      - 7077:7077
-    volumes:
-      - ./spark/util:/util/
-      - ./spark/work:/home/user
-      - ./spark/env:/env
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
 
 networks:
   rede_fia:
