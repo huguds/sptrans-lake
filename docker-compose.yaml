@@ -233,6 +233,8 @@ services:
         MINIO_NOTIFY_KAFKA_TOPIC_EventKafka: "sink-raw"
         MINIO_NOTIFY_KAFKA_QUEUE_LIMIT_EventKafka: "10000"
         MINIO_NOTIFY_KAFKA_TLS_EventKafka: "off"
+      volumes:
+        - minio:/data
    mc:
     image: minio/mc:${MINIO_MC_VERSION}
     container_name: mc
@@ -430,3 +432,4 @@ networks:
 
 volumes:
   postgres-db-volume:
+  minio:

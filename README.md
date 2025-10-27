@@ -20,8 +20,8 @@ cd sptrans-lake
 ## 2) Subir a stack principal (Docker Compose)
 ```bash
 docker compose up -d \
-  nifi minio mc postgres pgadmin zookeeper broker kafka-connect \
-  airflow-init airflow-webserver airflow-scheduler airflow-triggerer
+  nifi minio mc postgres \
+  airflow-init airflow-webserver airflow-scheduler airflow-triggerer postgres
 ```
 
 ## 3) (Opcional) Instalar libs Python locais
@@ -62,46 +62,58 @@ Acesse:
 
 ## 3) Postgres (DBs/Tabelas)
 
+- Para acessar:
+
+
 Bases: trusted_sptrans e refined_sptrans.
 
 Tabelas:
-- TRUSTED:
-```
-CREATE TABLE public.positions (
-  route_id INT NOT NULL,
-  route_code TEXT,
-  direction SMALLINT,
-  dir_from TEXT,
-  dir_to TEXT,
-  vehicle_id INT NOT NULL,
-  in_service BOOLEAN,
-  event_ts TIMESTAMPTZ NOT NULL,
-  lat DOUBLE PRECISION,
-  lon DOUBLE PRECISION,
-  speed DOUBLE PRECISION,
-  stop_id TEXT,
-  ingestion_ts TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (route_id, vehicle_id, event_ts)
-);
-```
-
 - REFINED:
 ```
-CREATE TABLE public.positions (
-   route_id INT,
-   route_code VARCHAR(50),
-   direction INT,
-   dir_from VARCHAR(100),
-   dir_to VARCHAR(100),
-   vehicle_id INT,
-   in_service BOOLEAN,
-   event_ts TIMESTAMP,
-   speed FLOAT,
-   stop_id VARCHAR(50),
-   ingestion_ts TIMESTAMP,
-   formatted_address VARCHAR(255),
-   postal_code VARCHAR(20)
+-- DB: refined_sptrans
+CREATE TABLE IF NOT EXISTS public.rf_positions (
+  route_id        INT NOT NULL,
+  route_code      TEXT,
+  direction       SMALLINT,
+  dir_from        TEXT,
+  dir_to          TEXT,
+  vehicle_id      INT NOT NULL,
+  in_service      BOOLEAN,
+  event_ts        TIMESTAMPTZ NOT NULL,
+  lat             DOUBLE PRECISION,
+  lon             DOUBLE PRECISION,
+  speed           DOUBLE PRECISION,
+  stop_id         TEXT,
+  ingestion_ts    TIMESTAMPTZ DEFAULT now(),
+
+  -- Enriquecimento (geocode):
+  formatted_address TEXT,
+  street            TEXT,
+  number            TEXT,
+  neighborhood      TEXT,
+  city              TEXT,
+  state             TEXT,
+  postal_code       TEXT,
+
+  PRIMARY KEY (route_id, vehicle_id, event_ts)
 );
+
+-- Índices auxiliares (idempotentes)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                 WHERE c.relname = 'idx_rf_positions_event_ts' AND n.nspname='public') THEN
+    CREATE INDEX idx_rf_positions_event_ts ON public.rf_positions (event_ts DESC);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                 WHERE c.relname = 'idx_positions_route_event' AND n.nspname='public') THEN
+    CREATE INDEX idx_positions_route_event ON public.rf_positions (route_id, event_ts DESC);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                 WHERE c.relname = 'idx_rf_positions_vehicle_event' AND n.nspname='public') THEN
+    CREATE INDEX idx_rf_positions_vehicle_event ON public.rf_positions (vehicle_id, event_ts DESC);
+  END IF;
+END$$;
 ```
 
 ## 4) Kafka & Kafka Connect
