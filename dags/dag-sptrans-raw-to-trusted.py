@@ -23,6 +23,7 @@ def get_var(name: str, default: str | None = None) -> str:
     except Exception:
         return os.getenv(name, default)
 
+
 def duckdb_config(
     con: duckdb.DuckDBPyConnection,
     *,
@@ -39,12 +40,14 @@ def duckdb_config(
     con.execute(f"SET s3_use_ssl={'true' if use_ssl else 'false'}")
     con.execute("SET s3_url_style='path'")  # MinIO usa path-style
 
+
 def ensure_bucket(s3, bucket: str):
     """Cria o bucket no MinIO se não existir."""
     try:
         s3.head_bucket(Bucket=bucket)
     except Exception:
         s3.create_bucket(Bucket=bucket)
+
 
 def parse_ndjson_or_json_bytes(raw: bytes) -> List[Dict[str, Any]]:
     """
@@ -77,6 +80,7 @@ def parse_ndjson_or_json_bytes(raw: bytes) -> List[Dict[str, Any]]:
         return [json.loads(text)]
     except Exception:
         return []
+
 
 def normalize_sptrans_records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
@@ -271,12 +275,14 @@ def raw_to_trusted(**ctx):
 
     print(f"[OK] Gravado {len(df)} registros em {trusted_uri}")
 
+
 # ----------------- DAG -----------------
 default_args = {
     "owner": "airflow",
     "retries": 1,
     "retry_delay": timedelta(minutes=2),
 }
+
 
 with DAG(
     dag_id="dag-sptrans-raw-to-trusted",

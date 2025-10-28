@@ -20,7 +20,7 @@ cd sptrans-lake
 ## 2) Subir a stack principal (Docker Compose)
 ```bash
 docker compose up -d \
-  nifi minio mc postgres \
+  nifi minio mc postgres pgadmin\
   airflow-init airflow-webserver airflow-scheduler airflow-triggerer postgres
 ```
 
