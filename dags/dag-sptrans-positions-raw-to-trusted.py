@@ -285,7 +285,7 @@ default_args = {
 
 
 with DAG(
-    dag_id="dag-sptrans-raw-to-trusted",
+    dag_id="dag-sptrans-positions-raw-to-trusted",
     start_date=datetime(2025, 1, 1),
     schedule_interval=None,
     catchup=False,

@@ -21,9 +21,9 @@ with DAG(
     max_active_runs=1,
 ) as dag:
 
-    run_raw_to_trusted = TriggerDagRunOperator(
-        task_id="run_raw_to_trusted",
-        trigger_dag_id="dag-sptrans-raw-to-trusted",
+    run_positions_raw_to_trusted = TriggerDagRunOperator(
+        task_id="run_positions_raw_to_trusted",
+        trigger_dag_id="dag-sptrans-positions-raw-to-trusted",
         conf={"triggered_by": "dag-sptrans-master"},
         wait_for_completion=True,            # espera terminar
         poke_interval=30,                    # verifica status a cada 30s
@@ -32,9 +32,31 @@ with DAG(
         deferrable=True,                  # (opcional) se seu Airflow suportar
     )
 
-    run_latest_per_vehicle = TriggerDagRunOperator(
-        task_id="run_latest_per_vehicle",
-        trigger_dag_id="dag-sptrans-latest-per-vehicle-append",
+    run_positions_trusted_to_refined = TriggerDagRunOperator(
+        task_id="run_positions_trusted_to_refined",
+        trigger_dag_id="dag-sptrans-positions-trusted-to-refined",
+        conf={"triggered_by": "dag-sptrans-master"},
+        wait_for_completion=True,
+        poke_interval=30,
+        allowed_states=["success"],
+        failed_states=["failed"],
+        deferrable=True,
+    )
+    
+    run_stops_raw_to_trusted = TriggerDagRunOperator(
+        task_id="run_stops_raw_to_trusted",
+        trigger_dag_id="dag-sptrans-stops-raw-to-trusted",
+        conf={"triggered_by": "dag-sptrans-master"},
+        wait_for_completion=True,
+        poke_interval=30,
+        allowed_states=["success"],
+        failed_states=["failed"],
+        deferrable=True,
+    )
+    
+    run_stops_trusted_to_refined = TriggerDagRunOperator(
+        task_id="run_stops_trusted_to_refined",
+        trigger_dag_id="dag-sptrans-stops-trusted-to-refined",
         conf={"triggered_by": "dag-sptrans-master"},
         wait_for_completion=True,
         poke_interval=30,
@@ -43,4 +65,4 @@ with DAG(
         deferrable=True,
     )
 
-    run_raw_to_trusted >> run_latest_per_vehicle
+    run_positions_raw_to_trusted >> run_positions_trusted_to_refined >> run_stops_raw_to_trusted >> run_stops_trusted_to_refined
