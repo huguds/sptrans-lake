@@ -21,7 +21,7 @@ cd sptrans-lake
 ```bash
 docker compose up -d \
   nifi minio mc postgres pgadmin\
-  airflow-init airflow-webserver airflow-scheduler airflow-triggerer postgres
+  airflow-init airflow-webserver airflow-scheduler airflow-triggerer
 ```
 
 ## 3) (Opcional) Instalar libs Python locais
@@ -47,7 +47,6 @@ Acesse:
 - MinIO Console: http://localhost:9001
 - pgAdmin: http://localhost:5433
 - Airflow: http://localhost:8080
-- Kafka Connect: http://localhost:8083
 
 ## 2) NiFi
 - Importe o template em nifi/template/.
@@ -65,12 +64,12 @@ Acesse:
 - Para acessar:
 
 
-Bases: trusted_sptrans e refined_sptrans.
+Bases: refined_sptrans
 
 Tabelas:
 - REFINED:
 ```
--- DB: refined_sptrans
+-- 1) DB: refined_sptrans
 CREATE TABLE IF NOT EXISTS public.rf_positions (
   route_id        INT NOT NULL,
   route_code      TEXT,
@@ -112,6 +111,38 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
                  WHERE c.relname = 'idx_rf_positions_vehicle_event' AND n.nspname='public') THEN
     CREATE INDEX idx_rf_positions_vehicle_event ON public.rf_positions (vehicle_id, event_ts DESC);
+  END IF;
+END$$;
+```
+
+-- Paradas por linha (cada linha tem seu conjunto de paradas)
+```
+CREATE TABLE IF NOT EXISTS public.rf_stops (
+  stop_id      BIGINT   NOT NULL,      -- cp
+  route_id     INT      NOT NULL,      -- cl (ou route_id que vc já trouxe do NiFi)
+  stop_name    TEXT,                   -- np
+  address      TEXT,                   -- ed
+  lat          DOUBLE PRECISION,       -- py
+  lon          DOUBLE PRECISION,       -- px
+  updated_at   TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (stop_id, route_id)
+);
+
+-- Índices úteis
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE c.relname='idx_rf_stops_route' AND n.nspname='public'
+  ) THEN
+    CREATE INDEX idx_rf_stops_route ON public.rf_stops(route_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE c.relname='idx_rf_stops_latlon' AND n.nspname='public'
+  ) THEN
+    CREATE INDEX idx_rf_stops_latlon ON public.rf_stops(lat, lon);
   END IF;
 END$$;
 ```
