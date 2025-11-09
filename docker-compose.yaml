@@ -88,6 +88,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ./config/airflow.cfg:/opt/airflow/airflow.cfg
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -210,18 +211,42 @@ services:
     hostname: nifi-n
     volumes:      
       - ./nifi/util/:/files
+      - ./monitoring/jmx/jmx_prometheus_javaagent-0.20.0.jar:/opt/jmx/jmx_prometheus_javaagent.jar:ro
+      - ./monitoring/jmx/nifi-jmx.yml:/opt/jmx/nifi-jmx.yml:ro
     environment:
       NIFI_WEB_HTTPS_PORT: "9443"
       SINGLE_USER_CREDENTIALS_USERNAME: ${SINGLE_USER_CREDENTIALS_USERNAME}
       SINGLE_USER_CREDENTIALS_PASSWORD: ${SINGLE_USER_CREDENTIALS_PASSWORD}
       TZ: "America/Sao_Paulo"
+      NIFI_JVM_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=0.0.0.0:9404:/opt/jmx/nifi-jmx.yml"
     ports:
       - 9443:9443
+      - 9404:9404
+
+   metabase:
+    image: metabase/metabase:v0.56.x
+    container_name: metabase
+    hostname: metabase
+    ports:
+      - 3000:3000
+    #condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: refined_sptrans
+      MB_DB_PORT: 5432
+      MB_DB_PASS: airflow
+      MB_DB_USER: airflow
+      MB_DB_HOST: postgres
+      MB_PASSWORD_COMPLEXITY: "weak"
+      MB_PASSWORD_LENGTH: 4
+    #user userlab@fiadatalab.com.br pass datalab
+    volumes:
+      - ./util:/util
 
    minio:
       image:  quay.io/minio/minio:RELEASE.2025-02-28T09-55-16Z
       entrypoint: sh
-      command:   '-c ''mkdir -p /minio_data/raw && mkdir -p /minio_data/trusted && mkdir -p /minio_data/refined && minio server /minio_data --console-address ":9001"'''
+      command:   '-c ''mkdir -p /minio_data/raw && mkdir -p /minio_data/trusted && minio server /minio_data --console-address ":9001"'''
       ports:
         - "9000:9000"
         - "9001:9001"
@@ -233,6 +258,7 @@ services:
         MINIO_NOTIFY_KAFKA_TOPIC_EventKafka: "sink-raw"
         MINIO_NOTIFY_KAFKA_QUEUE_LIMIT_EventKafka: "10000"
         MINIO_NOTIFY_KAFKA_TLS_EventKafka: "off"
+        MINIO_PROMETHEUS_AUTH_TYPE: "public"
       volumes:
         - minio:/data
    mc:
@@ -401,30 +427,69 @@ services:
       - bash
       - -c
       - airflow
-
-   spark:
-    platform: linux/amd64
-    image: fjardim/mds-spark
-    hostname: spark
-    container_name: spark
-    command:
-      - /bin/sh
-      - -c
-      - |
-        /usr/local/spark/sbin/start-master.sh
-        start-notebook.sh --NotebookApp.token=''
-    ports:
-      - 8889:8888
-      - 4040:4040
-      - 4041:4041
-      - 4042:4042
-      - 4043:4043
-      - 8180:8080
-      - 7077:7077
+  
+  #Observabilidade
+   prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
     volumes:
-      - ./spark/util:/util/
-      - ./spark/work:/home/user
-      - ./spark/env:/env
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: 
+      - "9090:9090"
+
+   alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: 
+      - "9093:9093"
+
+   grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./monitoring/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+   node_exporter:
+    image: prom/node-exporter:latest
+    pid: "host"
+    network_mode: "host"
+
+   cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+   statsd_exporter:
+    image: prom/statsd-exporter:v0.21.0
+    volumes:
+      - ./monitoring/statsd.yaml:/home/statsd-mapping-configs.yaml
+    entrypoint: ["/bin/sh", "-c", "--"]
+    command: ["statsd_exporter --log.level debug --statsd.mapping-config=/home/statsd-mapping-configs.yaml"]
+    ports:
+      - 9102:9102   # scrape port
+      - 9125:9125   # ingest port
+    restart: always
+
+   postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://airflow:airflow@postgres:5432/refined_sptrans?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - postgres
+
+   blackbox_exporter:
+    image: prom/blackbox-exporter:latest
+    ports:
+      - "9115:9115"
 
 networks:
   rede_fia:

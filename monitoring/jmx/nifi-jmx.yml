@@ -1,0 +1,46 @@
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # --- JVM básicas ---
+  - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(.*)'
+    name: jvm_memory_bytes
+    type: GAUGE
+    labels:
+      area: heap
+      attr: $1
+  - pattern: 'java.lang<type=Memory><NonHeapMemoryUsage>(.*)'
+    name: jvm_memory_bytes
+    type: GAUGE
+    labels:
+      area: nonheap
+      attr: $1
+  - pattern: 'java.lang<type=GarbageCollector,name=(.*)><>(CollectionCount|CollectionTime)'
+    name: jvm_gc_$2
+    type: GAUGE
+    labels:
+      gc: $1
+  - pattern: 'java.lang<type=Threading><>(ThreadCount|DaemonThreadCount|PeakThreadCount)'
+    name: jvm_threads_$1
+    type: GAUGE
+
+  # --- Métricas gerais do NiFi (MBeans do domínio org.apache.nifi) ---
+  # Status do controlador (fila total, fluxos, etc.) – os nomes variam por versão,
+  # então estas rules são genéricas e seguras; ajuste depois conforme os MBeans listados no /jmx
+  - pattern: 'org.apache.nifi<name=FlowController, type=FlowController><>(.*)'
+    name: nifi_flowcontroller_$1
+    type: GAUGE
+
+  - pattern: 'org.apache.nifi<type=Connection, name=(.*)><>(QueuedCount|QueuedBytes)'
+    name: nifi_connection_$2
+    type: GAUGE
+    labels:
+      connection: "$1"
+
+  - pattern: 'org.apache.nifi<type=Processor, name=(.*)><>(RunStatus|BytesRead|BytesWritten|Invocations|ProcessingNanos)'
+    name: nifi_processor_$2
+    type: GAUGE
+    labels:
+      processor: "$1"

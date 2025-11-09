@@ -38,9 +38,10 @@ def stops_trusted_to_refined(**_):
     trusted_bucket = get_var("TRUSTED_BUCKET", "trusted")
     trusted_prefix = get_var("STOPS_TRUSTED_PREFIX", "sptrans/stops/")
 
-    # partição do dia (ISO)
-    part_date = datetime.utcnow().date().isoformat()
-    pattern = f"s3://{trusted_bucket}/{trusted_prefix}evt_date={part_date}/*/*.parquet"  # evt_date + route_id
+    # partição do dia
+    date_now = datetime.now() - timedelta(hours=3)
+    reference_date = date_now.strftime("%Y-%m-%d")
+    pattern = f"s3://{trusted_bucket}/{trusted_prefix}evt_date={reference_date}/*/*.parquet"  # evt_date + route_id
 
     con = duckdb.connect()
     duckdb_config(con, endpoint_url=endpoint, access_key=access_key, secret_key=secret_key, use_ssl=endpoint.startswith("https"))

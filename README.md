@@ -19,9 +19,21 @@ cd sptrans-lake
 
 ## 2) Subir a stack principal (Docker Compose)
 ```bash
-docker compose up -d \
-  nifi minio mc postgres pgadmin\
-  airflow-init airflow-webserver airflow-scheduler airflow-triggerer
+  docker compose up -d nifi minio mc postgres pgadmin metabase airflow-init airflow-webserver airflow-scheduler airflow-triggerer 
+```
+
+
+docker compose up -d airflow-init 
+docker compose up -d airflow-webserver
+docker compose up -d airflow-scheduler
+docker compose up -d airflow-triggerer 
+
+  
+
+
+## 3) Subir a stack de observabilidade (Docker Compose)
+```bash
+docker compose up -d statsd_exporter prometheus grafana node_exporter cadvisor postgres_exporter blackbox_exporter
 ```
 
 ## 3) (Opcional) Instalar libs Python locais
@@ -32,14 +44,14 @@ docker compose up -d \
   - MINIO_ROOT_USER=123
   - MINIO_ROOT_PASSWORD=abc
 
-# ℹ️ Informações sobre o projeto
+# 1) Informações sobre o projeto
 
 ## Objetivo:
 - Construir um pipeline near real-time com camadas RAW → TRUSTED → REFINED:
-  - NiFi consome a API Olho Vivo (SPTRANS), normaliza JSON, aplica defaults e salva arquivos no MinIO (raw/trusted/refined);
-  - publica eventos no Kafka (sptrans.trusted).
-  - Kafka Connect (JDBC Sink) lê o tópico e faz UPSERT em trusted_sptrans.public.positions.
+  - NiFi consome a API Olho Vivo (SPTRANS), normaliza JSON, aplica defaults e salva arquivos no MinIO (raw).
+  - Airflow + DuckDB responsável por processar os dados que estão na camada do MinIO (Raw) e enviar para a MinIO (Trusted) e posteriormente para o Postgres (Refined).
   - Airflow executa rotinas (ex.: deduplicação, enriquecimento, carga para refined_sptrans).
+  - Kafka Connect (JDBC Sink) lê o tópico e faz UPSERT em trusted_sptrans.public.positions.
 
 Acesse:
 
@@ -47,23 +59,54 @@ Acesse:
 - MinIO Console: http://localhost:9001
 - pgAdmin: http://localhost:5433
 - Airflow: http://localhost:8080
+- Metabase: http://localhost:3000
 
-## 2) NiFi
+## 2) Armazenamento
+- Camadas:
+  - Raw - Responsável pelo armazenamento dos dados brutos produzidos pela requisição do NIFI à API da SPTrans.
+  - Trusted - Responsável por armazenar os dados processados e tratados pelo DuckDB executado no Airflow.
+  - Refined - Camada final de uso do usuário, no qual os dados estão devidamente tratados e padronizados. 
+
+  - **Observação**: Como boas práticas, será aplicado uma politica de ciclo de vida no MinIO para expurgar dados que estão a mais de dois dias na camada RAW.
+
+- Como Aplicar:
+  1. Instale o mc se caso não tiver, através do WSL:
+      wget https://dl.min.io/client/mc/release/linux-amd64/mc
+
+  2. Torne executável
+    chmod +x mc
+
+  3. Mover para /usr/local/bin
+    sudo mv mc /usr/local/bin/
+
+  4. Configure o alias apontando para seu MinIO
+    Se seu MinIO estiver rodando em Docker no Windows, use o mesmo host da sua UI:
+    🔹 Se você acessa pela UI: http://localhost:9000 → então:
+      mc alias set local http://localhost:9000 admin minioadmin
+  
+  5. Teste:
+    mc ls local
+  
+  6. Crie o arquivo de Lifecycle
+  
+  7. Importe para o bucket:
+    mc ilm import local/raw < lifecycle-raw.json
+
+  8. Cheque
+    mc ilm ls local/raw
+
+
+## 3) NiFi
 - Importe o template em nifi/template/.
 - Configure variáveis/Controller Services:
   - **Aws Credentials** - Passando as credenciais geradas para o futuro envio dos arquivos gerados
-  - **Kafka3ConnectionService**
 - MinIO (Access/Secret), endpoint http://minio:9000
-- Kafka (Bootstrap: kafka-broker:29092, tópico sptrans.trusted)
 
 - **Observação**: Para acessar a API é necessário se cadastrar para receber o Access Token para a requisição: https://www.sptrans.com.br/desenvolvedores/api-do-olho-vivo-guia-de-referencia/
 - (Opcional) Rate limit com ControlRate (ex.: 1 msg / 2s).
 
-## 3) Postgres (DBs/Tabelas)
-
+## 4) Postgres (DBs/Tabelas)
 - Para acessar:
-
-
 Bases: refined_sptrans
 
 Tabelas:
@@ -147,7 +190,7 @@ BEGIN
 END$$;
 ```
 
-## 4) Kafka & Kafka Connect
+## 5) Kafka & Kafka Connect
 
 - Listar os conectores para identificar se há algum ativo no momento (Kafka Connect):
 ```
@@ -174,6 +217,12 @@ docker exec -it broker bash -lc \
 - Exemplo:
 <img width="541" height="128" alt="image" src="https://github.com/user-attachments/assets/0fe46cd2-6a96-4722-ae9c-ff4fa4432e49" />
 
+- Testar conexão do prometheus com a porta aberta de outros serviços:
+```sh
+docker exec -it prometheus sh
+wget -qO- http://nifi-n:9404/metrics
+wget -qO- http://statsd_exporter:9102/metrics | head
+```
 
 - Deletar tópico caso necessário (Kafka):
 ```
@@ -205,7 +254,7 @@ curl -s -X PUT http://localhost:8083/connectors/conector-postgres/config \
 - Exemplo:
 <img width="542" height="315" alt="image" src="https://github.com/user-attachments/assets/153a1a1d-2fbc-4d84-b002-30bfe889be24" />
 
-## 5) Airflow
+## 6) Airflow
 
 - Cadastre variáveis (Admin → Variables), ex.: GEO_MAPS_KEY.
 - Agendamento sugerido: a cada 5 minutos → */5 * * * *.
@@ -225,6 +274,8 @@ docker exec -it broker bash -lc \
 docker compose exec postgres psql -U airflow -d trusted_sptrans \
   -c "SELECT COUNT(*) FROM public.positions;"
 ```
+
+UPDATE core_user SET password = 'veto123' WHERE email = 'huguuvictor01@gmail.com';
 
 💡 Exemplos úteis
 

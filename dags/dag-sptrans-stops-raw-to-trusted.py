@@ -117,8 +117,11 @@ def stops_raw_to_trusted(**_):
     secret_key = get_var("MINIO_SECRET_KEY", "minioadmin")
 
     # buckets/prefix
+    date_now = datetime.now() - timedelta(hours=3)
+    reference_date = date_now.strftime("%Y-%m-%d")
+
     raw_bucket     = get_var("RAW_BUCKET", "raw")
-    raw_prefix     = get_var("STOPS_RAW_PREFIX", f"olhovivo/paradas/{datetime.utcnow().strftime('%Y-%m-%d')}")
+    raw_prefix     = get_var("STOPS_RAW_PREFIX", f"sptrans/stops/{reference_date}")
     trusted_bucket = get_var("TRUSTED_BUCKET", "trusted")
     trusted_prefix = get_var("STOPS_TRUSTED_PREFIX", "sptrans/stops/")
 

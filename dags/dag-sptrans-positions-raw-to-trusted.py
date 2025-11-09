@@ -146,12 +146,13 @@ def raw_to_trusted(**ctx):
     secret_key = get_var("MINIO_SECRET_KEY", "minioadmin")
 
     # Partição alvo (ex.: ontem; ajuste para 0 se quiser hoje)
-    reference_date = datetime.now().strftime("%Y-%m-%d")
+    date_now = datetime.now() - timedelta(hours=3)
+    reference_date = date_now.strftime("%Y-%m-%d")
     logging.info(f'A data de referência é: {reference_date}')
 
     # Buckets/prefixos
     raw_bucket     = "raw"
-    raw_prefix     = f"olhovivo/posicao/{reference_date}"
+    raw_prefix     = f"sptrans/positions/{reference_date}"
     
     trusted_bucket = "trusted"
     trusted_prefix = f"sptrans/positions/"

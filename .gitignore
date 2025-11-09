@@ -11,3 +11,5 @@ jp*
 *pyc
 .env
 *.git*
+*js*
+*svg*
