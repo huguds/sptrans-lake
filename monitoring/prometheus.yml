@@ -5,7 +5,7 @@ global:
 scrape_configs:
   - job_name: 'nifi-jmx'
     static_configs:
-      - targets: ['nifi-n:9404']
+      - targets: ['nifi-n:9405']
 
   - job_name: 'minio'
     metrics_path: /minio/v2/metrics/cluster
@@ -24,10 +24,6 @@ scrape_configs:
         labels:
           airflow_id: 'airflow'
   
-  - job_name: 'node'
-    static_configs:
-      - targets: ['node_exporter:9100']
-
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
@@ -46,7 +42,3 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox_exporter:9115
-
-  # - job_name: 'pushgateway'      # opcional p/ batches
-  #   static_configs:
-  #     - targets: ['pushgateway:9091']

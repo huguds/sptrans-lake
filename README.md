@@ -3,11 +3,9 @@
 # 🛠️ Ferramentas
 
 - NiFi → Ingestão/transformação de dados (API Olho Vivo → Kafka/MinIO)
-- Kafka → Streaming de mensagens (tópico sptrans.trusted)
-- Kafka Connect (JDBC Sink) → Upsert no Postgres
-- Postgres → Camadas TRUSTED e REFINED
-- MinIO → Data Lake (raw, trusted, refined)
-- Airflow → Orquestração (jobs batch/enriquecimento)
+- Postgres → Camadas REFINED
+- MinIO → Data Lake (raw e trusted)
+- Airflow → Orquestração (jobs batch (DuckDB/enriquecimento)
 - Python (Pandas/SQLAlchemy) → análises e utilitários locais
 
 # 👷 Como rodar
@@ -17,86 +15,49 @@ git clone https://github.com/huguds/sptrans-lake.git
 cd sptrans-lake
 ```
 
-## 2) Subir a stack principal (Docker Compose)
+## 2) Subir a stack infraestrutura + serviços (Docker Compose)
 ```bash
   docker compose up -d nifi minio mc postgres pgadmin metabase airflow-init airflow-webserver airflow-scheduler airflow-triggerer 
 ```
 
-
-docker compose up -d airflow-init 
-docker compose up -d airflow-webserver
-docker compose up -d airflow-scheduler
-docker compose up -d airflow-triggerer 
-
-  
-
-
 ## 3) Subir a stack de observabilidade (Docker Compose)
 ```bash
-docker compose up -d statsd_exporter prometheus grafana node_exporter cadvisor postgres_exporter blackbox_exporter
+docker compose up -d statsd_exporter prometheus grafana cadvisor postgres_exporter blackbox_exporter
 ```
 
-## 3) (Opcional) Instalar libs Python locais
-```pip install -r requirements.txt  # se existir```
+## 4) (Opcional) Instalar libs Python locais
+```pip install -r requirements.txt```
 
 ## **Observação**: após instalar bibliotecas Python na sua IDE/Jupyter, reinicie o kernel para reconhecer os pacotes, além disso é necessário criar um arquivo .env com todas as credenciais necessárias, por exemplo:
   - CONFLUENT_VERSION=7.6.1
   - MINIO_ROOT_USER=123
   - MINIO_ROOT_PASSWORD=abc
 
-# 1) Informações sobre o projeto
+# 5) Informações sobre o projeto
 
 ## Objetivo:
 - Construir um pipeline near real-time com camadas RAW → TRUSTED → REFINED:
   - NiFi consome a API Olho Vivo (SPTRANS), normaliza JSON, aplica defaults e salva arquivos no MinIO (raw).
   - Airflow + DuckDB responsável por processar os dados que estão na camada do MinIO (Raw) e enviar para a MinIO (Trusted) e posteriormente para o Postgres (Refined).
   - Airflow executa rotinas (ex.: deduplicação, enriquecimento, carga para refined_sptrans).
-  - Kafka Connect (JDBC Sink) lê o tópico e faz UPSERT em trusted_sptrans.public.positions.
+  - O Metabase se conecta no banco de dados do Postgres onde está localizado a camada Refined no qual é construído todos os gráficos com as métricas.
 
-Acesse:
+## Acesse:
+  - NiFi: https://localhost:9443
+  - MinIO Console: http://localhost:9001
+  - pgAdmin: http://localhost:5433
+  - Airflow: http://localhost:8080
+  - Metabase: http://localhost:3000
+  - Prometheus: http://localhost:9090
+  - Grafana: http://localhost:3001
 
-- NiFi: https://localhost:9443
-- MinIO Console: http://localhost:9001
-- pgAdmin: http://localhost:5433
-- Airflow: http://localhost:8080
-- Metabase: http://localhost:3000
-
-## 2) Armazenamento
+## 6) Armazenamento
 - Camadas:
   - Raw - Responsável pelo armazenamento dos dados brutos produzidos pela requisição do NIFI à API da SPTrans.
   - Trusted - Responsável por armazenar os dados processados e tratados pelo DuckDB executado no Airflow.
   - Refined - Camada final de uso do usuário, no qual os dados estão devidamente tratados e padronizados. 
 
-  - **Observação**: Como boas práticas, será aplicado uma politica de ciclo de vida no MinIO para expurgar dados que estão a mais de dois dias na camada RAW.
-
-- Como Aplicar:
-  1. Instale o mc se caso não tiver, através do WSL:
-      wget https://dl.min.io/client/mc/release/linux-amd64/mc
-
-  2. Torne executável
-    chmod +x mc
-
-  3. Mover para /usr/local/bin
-    sudo mv mc /usr/local/bin/
-
-  4. Configure o alias apontando para seu MinIO
-    Se seu MinIO estiver rodando em Docker no Windows, use o mesmo host da sua UI:
-    🔹 Se você acessa pela UI: http://localhost:9000 → então:
-      mc alias set local http://localhost:9000 admin minioadmin
-  
-  5. Teste:
-    mc ls local
-  
-  6. Crie o arquivo de Lifecycle
-  
-  7. Importe para o bucket:
-    mc ilm import local/raw < lifecycle-raw.json
-
-  8. Cheque
-    mc ilm ls local/raw
-
-
-## 3) NiFi
+## 7) NiFi
 - Importe o template em nifi/template/.
 - Configure variáveis/Controller Services:
   - **Aws Credentials** - Passando as credenciais geradas para o futuro envio dos arquivos gerados
@@ -105,7 +66,7 @@ Acesse:
 - **Observação**: Para acessar a API é necessário se cadastrar para receber o Access Token para a requisição: https://www.sptrans.com.br/desenvolvedores/api-do-olho-vivo-guia-de-referencia/
 - (Opcional) Rate limit com ControlRate (ex.: 1 msg / 2s).
 
-## 4) Postgres (DBs/Tabelas)
+## 8) Postgres (DBs/Tabelas)
 - Para acessar:
 Bases: refined_sptrans
 
@@ -162,7 +123,7 @@ END$$;
 ```
 CREATE TABLE IF NOT EXISTS public.rf_stops (
   stop_id      BIGINT   NOT NULL,      -- cp
-  route_id     INT      NOT NULL,      -- cl (ou route_id que vc já trouxe do NiFi)
+  route_id     INT      NOT NULL,      -- cl
   stop_name    TEXT,                   -- np
   address      TEXT,                   -- ed
   lat          DOUBLE PRECISION,       -- py
@@ -190,99 +151,20 @@ BEGIN
 END$$;
 ```
 
-## 5) Kafka & Kafka Connect
-
-- Listar os conectores para identificar se há algum ativo no momento (Kafka Connect):
-```
-curl -s http://localhost:8083/connectors | jq .
-```
-- Exemplo:
-<img width="829" height="85" alt="image" src="https://github.com/user-attachments/assets/931cdc1a-91ca-4f9a-99f7-95e1091b39c9" />
-
-
-- Listar os tópicos (Kafka):
-```
-kafka-topics --bootstrap-server localhost:9092 --list
-```
-- Exemplo:
-<img width="559" height="187" alt="image" src="https://github.com/user-attachments/assets/3a41d2b7-ca14-477c-88cf-717ad8a8190a" />
-
-- Criar/garantir o tópico (Kafka):
-```
-docker exec -it broker bash -lc \
-  "kafka-topics --bootstrap-server broker:29092 \
-   --create --if-not-exists --topic sptrans-trusted \
-   --replication-factor 1 --partitions 1"
-```
-- Exemplo:
-<img width="541" height="128" alt="image" src="https://github.com/user-attachments/assets/0fe46cd2-6a96-4722-ae9c-ff4fa4432e49" />
-
-- Testar conexão do prometheus com a porta aberta de outros serviços:
-```sh
-docker exec -it prometheus sh
-wget -qO- http://nifi-n:9404/metrics
-wget -qO- http://statsd_exporter:9102/metrics | head
-```
-
-- Deletar tópico caso necessário (Kafka):
-```
-kafka-topics --delete --topic dlq.pg.positions --bootstrap-server localhost:9092
-```
-
-- Leitura das mensagem (Kafka):
-```
-docker exec -it broker bash -lc \
-    'kafka-console-consumer --bootstrap-server broker:9092 \
-    --topic sptrans-trusted --from-beginning \
-    --property print.key=true --property print.value=true --property print.headers=true
-```
-
-- Criar/atualizar o conector JDBC (Kafka Connect):
-```
-curl -s -X PUT http://localhost:8083/connectors/conector-postgres/config \
-  -H "Content-Type: application/json" \
-  --data-binary @kafka-connect/conectores/conector-postgres.json
-```
-- Exemplo (Código de criação dos conectores):
-<img width="535" height="361" alt="image" src="https://github.com/user-attachments/assets/db5a4deb-28df-434d-802b-3a73f1a1ab3c" />
-
-- Exempl o(resultado após a listagem dos conectores):
-<img width="541" height="88" alt="image" src="https://github.com/user-attachments/assets/351f27d1-d289-4d72-9c74-6b1b2670cb7f" />
-
-- Status:
-```curl -s http://localhost:8083/connectors/conector-postgres/status | jq```
-- Exemplo:
-<img width="542" height="315" alt="image" src="https://github.com/user-attachments/assets/153a1a1d-2fbc-4d84-b002-30bfe889be24" />
-
-## 6) Airflow
-
-- Cadastre variáveis (Admin → Variables), ex.: GEO_MAPS_KEY.
-- Agendamento sugerido: a cada 5 minutos → */5 * * * *.
-
-🧪 Teste rápido (fim a fim)
-
-Ver mensagens no tópico:
-```
-docker exec -it broker bash -lc \
-  'kafka-console-consumer --bootstrap-server broker:9092 \
-    --topic sptrans-trusted --from-beginning \
-    --property print.key=true --property print.value=true --property print.headers=true'
-```
-
-- Conferir no Postgres:
-```
-docker compose exec postgres psql -U airflow -d trusted_sptrans \
-  -c "SELECT COUNT(*) FROM public.positions;"
-```
-
-UPDATE core_user SET password = 'veto123' WHERE email = 'huguuvictor01@gmail.com';
-
 💡 Exemplos úteis
 
-Produzir JSON válido no tópico
-```
-{"route_id":1114,"route_code":"736I-10","direction":2,"dir_from":"STO. AMARO","dir_to":"JD. INGÁ","vehicle_id":68853,"in_service":true,"event_ts":"2025-10-08T16:06:27Z","lat":-23.65,"lon":-46.66}
-```
+- Testar conexão do prometheus com a porta aberta de outros serviços (Se Necessário):
+  ```sh
+  docker exec -it prometheus sh
+  wget -qO- http://nifi-n:9404/metrics
+  wget -qO- http://statsd_exporter:9102/metrics | head
+  ```
+
+- Conferir no Postgres:
+  ```
+  docker compose exec postgres psql -U airflow -d trusted_sptrans \
+    -c "SELECT COUNT(*) FROM public.positions;"
+  ```
 
 Deduplicação (REFINED) — exemplo
 ```
@@ -294,15 +176,12 @@ WHERE a.ctid < b.ctid
 ```
 
 🧯 Troubleshooting (curto)
-
 - NiFi → Kafka Timeout/InitProducerId: ver bootstrap.servers = kafka-broker:29092 e conectividade.
 - LEADER_NOT_AVAILABLE: aguarde alguns segundos após criar tópico.
 - Connector “Struct schema required”: com value.converter.schemas.enable=false, publique JSON flat com campos esperados; ou ative schemas e envie schema+payload.
 - Airflow conecta em localhost e falha: dentro do Compose o host é postgres.
 
-🚀 Próximos passos
-
-- Ingerir GTFS (routes, trips, stops, stop_times, shapes) para enriquecer REFINED.
-- KPIs (veículos ativos, headway, atraso, velocidade média).
+🚀 KPIs
+-  (veículos ativos, headway, atraso, velocidade média).
 - Dashboards (Grafana/Metabase).
 - Materialized Views e mais índices.
