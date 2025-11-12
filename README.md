@@ -2,7 +2,7 @@
 
 # 🛠️ Ferramentas
 
-- NiFi → Ingestão/transformação de dados (API Olho Vivo → Kafka/MinIO)
+- NiFi → Ingestão/transformação de dados (API Olho Vivo → MinIO)
 - Postgres → Camadas REFINED
 - MinIO → Data Lake (raw e trusted)
 - Airflow → Orquestração (jobs batch (DuckDB/enriquecimento)
