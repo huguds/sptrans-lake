@@ -154,11 +154,11 @@ def stops_raw_to_trusted(**_):
 
         for it in items:
             if not isinstance(it, dict):
-                continue  # já está achatado, mas garantimos
+                continue
 
             # mapeamento do payload da SPTrans (cp/np/ed/py/px) + route_id se existir
             rows.append({
-                "route_id":     it.get("route_id"),  # pode não existir; tudo bem
+                "route_id":     it.get("route_id"),
                 "stop_id":      it.get("cp"),
                 "stop_name":    it.get("np"),
                 "address":      it.get("ed"),
