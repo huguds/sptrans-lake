@@ -176,6 +176,6 @@ WHERE a.ctid < b.ctid
 ```
 
 🚀 KPIs
--  (veículos ativos, headway, atraso, velocidade média).
+-  (veículos ativos, veiculos parados, pontos com mais paradas e etc).
 - Dashboards (Grafana/Metabase).
 - Materialized Views e mais índices.
