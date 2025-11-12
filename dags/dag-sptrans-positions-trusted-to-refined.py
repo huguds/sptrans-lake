@@ -65,7 +65,7 @@ def positions_trusted_to_refined(**_):
     pg_url = get_var("POSTGRES_URL", "postgresql+psycopg2://airflow:airflow@postgres:5432/refined_sptrans")
     eng = create_engine(pg_url)
 
-    # Tabelas-alvo (mantém colunas de endereço para compatibilidade; ficarão NULL)
+    # Tabelas-alvo
     ddl_positions = """
     CREATE TABLE IF NOT EXISTS public.rf_positions (
       route_id INT NOT NULL,

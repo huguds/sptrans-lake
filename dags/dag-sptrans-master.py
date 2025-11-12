@@ -15,7 +15,7 @@ with DAG(
     dag_id="dag-sptrans-master",
     description="Orquestra: raw->trusted e depois latest-per-vehicle-append",
     start_date=datetime(2025, 1, 1),
-    schedule_interval="*/3 * * * *",
+    schedule_interval="*/2 * * * *",
     catchup=False,
     default_args=default_args,
     max_active_runs=1,
