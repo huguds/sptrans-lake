@@ -175,12 +175,6 @@ WHERE a.ctid < b.ctid
   AND a.event_ts  = b.event_ts;
 ```
 
-🧯 Troubleshooting (curto)
-- NiFi → Kafka Timeout/InitProducerId: ver bootstrap.servers = kafka-broker:29092 e conectividade.
-- LEADER_NOT_AVAILABLE: aguarde alguns segundos após criar tópico.
-- Connector “Struct schema required”: com value.converter.schemas.enable=false, publique JSON flat com campos esperados; ou ative schemas e envie schema+payload.
-- Airflow conecta em localhost e falha: dentro do Compose o host é postgres.
-
 🚀 KPIs
 -  (veículos ativos, headway, atraso, velocidade média).
 - Dashboards (Grafana/Metabase).
