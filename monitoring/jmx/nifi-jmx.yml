@@ -1,0 +1,105 @@
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # --------------------------
+  # JVM - Memory (Heap & NonHeap)
+  # --------------------------
+  - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(\\w+)'
+    name: jvm_memory_heap_bytes
+    type: GAUGE
+    labels: { attr: $1 }
+
+  - pattern: 'java.lang<type=Memory><NonHeapMemoryUsage>(\\w+)'
+    name: jvm_memory_nonheap_bytes
+    type: GAUGE
+    labels: { attr: $1 }
+
+  # Memory Pools (G1 Eden/Survivor/Old, Metaspace etc.)
+  - pattern: 'java.lang<type=MemoryPool, name=(.+)><Usage>(\\w+)'
+    name: jvm_memory_pool_bytes
+    type: GAUGE
+    labels: { pool: $1, attr: $2 }
+
+  # --------------------------
+  # JVM - Garbage Collector
+  # --------------------------
+  - pattern: 'java.lang<type=GarbageCollector,name=(.+)><>(CollectionCount|CollectionTime)'
+    name: jvm_gc_$2
+    type: COUNTER
+    labels: { gc: $1 }
+
+  # --------------------------
+  # JVM - Threads
+  # --------------------------
+  - pattern: 'java.lang<type=Threading><>(ThreadCount|DaemonThreadCount|PeakThreadCount|TotalStartedThreadCount)'
+    name: jvm_threads_$1
+    type: GAUGE
+
+  # --------------------------
+  # JVM - Classes
+  # --------------------------
+  - pattern: 'java.lang<type=ClassLoading><>(LoadedClassCount|TotalLoadedClassCount|UnloadedClassCount)'
+    name: jvm_classes_$1
+    type: GAUGE
+
+  # --------------------------
+  # JVM - Buffer Pools (Direct/Mapped)
+  # --------------------------
+  - pattern: 'java.nio<type=BufferPool, name=(.+)><>(Count|MemoryUsed|TotalCapacity)'
+    name: jvm_bufferpool_$2
+    type: GAUGE
+    labels: { pool: $1 }
+
+  # --------------------------
+  # JVM - Runtime (Uptime)
+  # --------------------------
+  - pattern: 'java.lang<type=Runtime><>(Uptime)'
+    name: jvm_runtime_uptime_ms
+    type: GAUGE
+
+  # --------------------------
+  # OS / CPU / File Descriptors
+  # (alguns vêm via java.lang, outros via com.sun.management)
+  # --------------------------
+  - pattern: 'java.lang<type=OperatingSystem><>(SystemCpuLoad|ProcessCpuLoad|SystemLoadAverage|AvailableProcessors)'
+    name: jvm_os_$1
+    type: GAUGE
+
+  - pattern: 'com.sun.management<type=OperatingSystem><>(ProcessCpuLoad|SystemCpuLoad|OpenFileDescriptorCount|MaxFileDescriptorCount|ProcessCpuTime)'
+    name: jvm_os_$1
+    type: GAUGE
+
+  # --------------------------
+  # NiFi - Processors (best-effort)
+  # --------------------------
+  - pattern: 'org.apache.nifi<type=Processor, name=(.+)><>(RunStatus|BytesRead|BytesWritten|Invocations)'
+    name: nifi_processor_$2
+    type: GAUGE
+    labels: { processor: $1 }
+
+  # --------------------------
+  # NiFi - Connections (filas)
+  # --------------------------
+  - pattern: 'org.apache.nifi<type=Connection, name=(.+)><>(QueuedCount|QueuedBytes)'
+    name: nifi_connection_$2
+    type: GAUGE
+    labels: { connection: $1 }
+
+  # --------------------------
+  # NiFi - Flow Controller (totais da topologia) - pode variar por versão
+  # --------------------------
+  - pattern: 'org.apache.nifi<type=FlowController><>(ActiveThreadCount|FlowFilesQueued|BytesQueued)'
+    name: nifi_flowcontroller_$1
+    type: GAUGE
+
+  # --------------------------
+  # (Opcional) catch-all temporário para descobrir MBeans
+  # ATENÇÃO: deixe desabilitado por padrão; habilite só para mapear nomes.
+  # --------------------------
+  # - pattern: '.*'
+  #   name: jmx_scrape_debug
+  #   type: COUNTER
+  #   help: "debug rule to discover attributes (remove after mapping)"
