@@ -6,7 +6,7 @@
 - Postgres → Camadas REFINED
 - MinIO → Data Lake (raw e trusted)
 - Airflow → Orquestração (jobs batch (DuckDB/enriquecimento)
-- Python (Pandas/SQLAlchemy) → análises e utilitários locais
+- Python (Pandas) → análises e utilitários locais
 
 # 👷 Como rodar
 ## 1) Clonar o repositório
